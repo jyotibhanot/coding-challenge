@@ -1,0 +1,11 @@
+---
+# tasks file for flask-app
+
+- include: setup.yml
+  tags: 
+    - flaskapp-setup
+
+- include: deploy.yml
+  tags: 
+    - flaskapp-deploy
+

@@ -1,0 +1,11 @@
+---
+- name: Setting up Flask application
+  hosts: all
+  remote_user: vagrant
+  become: true
+
+  roles:
+    - {role: flask-app,
+       tags: [flaskapp]}
+
+

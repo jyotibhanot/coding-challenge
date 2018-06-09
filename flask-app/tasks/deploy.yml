@@ -1,0 +1,88 @@
+---
+- name: deploy code from repository
+  git: 
+    repo: "{{ repo_url }}" 
+    dest: "{{ webapps_dir }}" 
+    remote: "{{ repo_remote }}" 
+    version: "{{ repo_version }}"
+    force: yes
+  become_user: "{{ flaskapp_user }}" 
+  tags: 
+    - git_clone
+
+- name: install dependencies into virtualenv
+  pip: 
+    requirements: "{{ webapps_dir }}/requirements.txt" 
+    virtualenv: "{{ webapps_dir }}/venv"
+    state: present
+  tags: 
+    - install_requirements
+
+- name: ensure application log directory
+  file: 
+     path: "{{webapps_dir}}/{{app_name}}/log" 
+     owner: "{{ flaskapp_user }}"
+     group: "{{ flaskapp_user }}"
+     mode: 0775 
+     state: directory 
+     recurse: yes
+  tags: 
+    - log_dir
+
+- name: ensure application log rotation
+  template: 
+        src: templates/app_logrotate.conf.j2 
+        dest: "/etc/logrotate.d/{{ app_name }}" 
+        mode: 0644
+  tags: 
+    - logrotation_config
+
+- name: create supervisor program config
+  template: 
+        src: templates/supervisor.ini.j2 
+        dest: "/etc/supervisor/{{ app_name }}.ini"
+  tags: 
+    - supervisor_config
+
+- name: reread supervisorctl
+  command: supervisorctl reread
+  tags: 
+    - supervisor_config,reread_supervisor
+
+- name: update supervisorctl
+  command: supervisorctl update
+  tags: 
+    - supervisor_config,update_supervisor
+
+- name: create nginx site config
+  template:
+        src: templates/nginx_site.conf.j2 
+        dest: "/etc/nginx/sites-available/{{ app_name }}.conf"
+  notify:
+     - restart nginx
+  tags: 
+    - nginx_config
+
+- name: link nginx config
+  file: 
+     src: "/etc/nginx/sites-available/{{ app_name }}.conf" 
+     dest: "/etc/nginx/sites-enabled/{{ app_name }}.conf" 
+     state: link
+  tags: 
+    - nginx_config
+
+- name: ensure nginx is running and enable it at boot
+  service:
+      name: nginx
+      state: started
+      enabled: yes
+  tags: 
+    - start_nginx
+
+- name: start app
+  supervisorctl: 
+           name: "{{ app_name }}" 
+           state: started
+  tags: 
+    - flaskapp_start
+

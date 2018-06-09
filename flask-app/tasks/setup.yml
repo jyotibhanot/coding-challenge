@@ -1,0 +1,115 @@
+---
+- name: update apt repo
+  apt: 
+    update_cache: yes
+  tags: 
+    - apt_update
+
+- name: set timezone to UTC
+  command: timedatectl set-timezone UTC
+  when: ansible_date_time.tz != 'UTC'
+  tags:
+    - time
+
+- name: install common packages needed for python application development
+  apt: 
+    name: "{{ item }}"
+    state: present
+  with_items:
+     - "{{ flaskapp_packages }}"
+  tags: 
+    - install_dependencies
+
+#- name: install common packages needed for python application development
+#  shell: "apt-get install -y {{ item }}"
+#  with_items: 
+#         - "{{ flaskapp_packages }}"
+#  tags: 
+#    - install_dependencies
+
+- name: install various libraries with pip
+  pip: 
+    name: "{{ item }}" 
+    state: present
+  with_items:
+          - "{{ pip_library }}"
+  tags: 
+    - install_dependencies
+
+#- name: install various libraries with pip
+#  shell: "pip install {{ item }}"
+#  with_items:
+#        - "{{ pip_library }}"
+#  tags: 
+#    - install_dependencies]
+
+- name: add nginx ppa
+  apt_repository:
+            repo: ppa:nginx/stable
+            state: present
+  tags:
+    - nginx_ppa
+
+- name: remove default nginx site
+  file: 
+     path: /etc/nginx/sites-enabled/default 
+     state: absent
+  tags: 
+    - nginx_config
+
+- name: write nginx.conf
+  template: 
+        src: templates/nginx.conf.j2 
+        dest: /etc/nginx/nginx.conf
+  tags: 
+    - nginx_config
+
+- name: ensure nginx log rotation
+  template:
+        src: templates/nginx_logrotate.conf.j2
+        dest: /etc/logrotate.d/nginx
+        mode: 0644
+  tags: 
+    - logrotation_config
+
+- name: create supervisord config folder
+  file: 
+     dest: /etc/supervisor 
+     state: directory 
+     owner: root
+  tags: 
+    - supervisor_config
+
+- name: create supervisord config
+  template: 
+        src: templates/supervisord.conf.j2 
+        dest: /etc/supervisord.conf
+  tags: 
+    - supervisor_config
+
+- name: create supervisord init script
+  template: 
+        src: templates/supervisord.sh.j2 
+        dest: /etc/init.d/supervisord 
+        mode: 0755
+  tags: 
+    - supervisor_config
+
+- name: start supervisord service and have it run during system startup
+  service: 
+        name: supervisord 
+        state: started 
+        enabled: yes
+  tags: 
+    - supervisor_config,supervisor_start
+
+- name: create webapps directory
+  file: 
+     dest: "{{ webapps_dir }}" 
+     owner: "{{ flaskapp_user }}" 
+     group: "{{ flaskapp_user }}"
+     mode: 0775 
+     state: directory
+     recurse: yes
+  tags: 
+    - create_dir

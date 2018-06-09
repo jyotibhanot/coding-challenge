@@ -1,0 +1,14 @@
+"{{webapps_dir}}/{{app_name}}/log/*.log"
+{
+  daily
+  create 0644 www-data www-data
+  rotate 2
+  maxsize 1M
+  copytruncate
+  missingok
+  notifempty
+  su root www-data
+  compress
+  dateext
+  dateformat -%Y-%m-%d-%s
+}

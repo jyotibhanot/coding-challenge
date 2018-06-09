@@ -1,0 +1,25 @@
+---
+# variables to be used in flask-app
+
+app_name: app
+repo_url: https://jyoti_bhanot@bitbucket.org/azneita/devops-challenge.git
+flaskapp_user: www-data
+repo_remote: origin
+repo_version: master
+webapps_dir: /webapps/devops
+wsgi_file: app.py
+wsgi_callable: app
+flaskapp_packages:
+  - build-essential
+  - libpq-dev
+  - python-dev
+  - python-setuptools
+  - git-core
+  - nginx
+  - python-pip
+pip_library:
+  - virtualenv
+  - supervisor
+  - uwsgi
+nginx_access_log: /var/log/nginx/nginx-access.log
+nginx_error_log: /var/log/nginx/nginx-error.log
